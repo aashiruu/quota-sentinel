@@ -104,3 +104,88 @@ x-tenant-id: tenant-beta
 
 {"message":"Resource payload successfully retrieved.","status":"success"}
 ```
+## Stage 2: Tiered Quotas
+### Verification Goal
+Demonstrate that tenants on different tiers are enforced at different quota thresholds:
+
+1. `tenant-free` (Free tier) is rate-limited upon reaching its 5 req/min threshold (request 6 returns 429).
+
+2. `tenant-standard` (Standard tier) processes requests past 5 without interruption up to its 20 req/min limit.
+
+### Automated Test Suite Execution
+```text
+(.venv) famous@famous:~/quota-sentinel$ pytest -v
+================================================= test session starts ==================================================
+platform linux -- Python 3.10.12, pytest-9.1.1, pluggy-1.6.0 -- /home/famous/quota-sentinel/.venv/bin/python3
+cachedir: .pytest_cache
+rootdir: /home/famous/quota-sentinel
+configfile: pytest.ini
+plugins: asyncio-1.4.0, anyio-4.14.2
+asyncio: mode=auto, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 3 items
+
+tests/test_rate_limiter.py::test_health_check_does_not_require_tenant PASSED                                     [ 33%]
+tests/test_rate_limiter.py::test_missing_tenant_header_rejected PASSED                                           [ 66%]
+tests/test_rate_limiter.py::test_tiered_rate_limits_enforcement PASSED                                           [100%]
+
+============================================ 3 passed, 3 warnings in 2.33s =============================================
+```
+### Manual Curl Verification Outputs
+1. Free Tier Exhaustion (tenant-free, Limit 5)
+```HTTP
+--- Free Tier Request 5 (200 OK) ---
+HTTP/1.1 200 OK
+date: Sun, 16 Aug 2026 13:37:50 GMT
+server: uvicorn
+content-length: 73
+content-type: application/json
+x-tenant-id: tenant-free
+x-ratelimit-tier: free
+x-ratelimit-limit: 5
+x-ratelimit-remaining: 0
+
+{"message":"Resource payload successfully retrieved.","status":"success"}
+```
+```HTTP
+--- Free Tier Request 6 (429 Too Many Requests) ---
+HTTP/1.1 429 Too Many Requests
+date: Sun, 16 Aug 2026 13:37:50 GMT
+server: uvicorn
+x-ratelimit-tier: free
+x-ratelimit-limit: 5
+x-ratelimit-remaining: 0
+retry-after: 59
+content-length: 173
+content-type: application/json
+
+{"error":"Too Many Requests","message":"Tenant 'tenant-free' on tier 'free' exceeded quota limit of 5 requests per minute.","tier":"free","limit":5,"retry_after_seconds":59}
+```
+2. Standard Tier Execution (tenant-standard, Limit 20)
+```HTTP
+--- Standard Tier Request 6 (200 OK) ---
+HTTP/1.1 200 OK
+date: Sun, 16 Aug 2026 13:38:06 GMT
+server: uvicorn
+content-length: 73
+content-type: application/json
+x-tenant-id: tenant-standard
+x-ratelimit-tier: standard
+x-ratelimit-limit: 20
+x-ratelimit-remaining: 14
+
+{"message":"Resource payload successfully retrieved.","status":"success"}
+```
+```HTTP
+--- Standard Tier Request 7 (200 OK) ---
+HTTP/1.1 200 OK
+date: Sun, 16 Aug 2026 13:38:06 GMT
+server: uvicorn
+content-length: 73
+content-type: application/json
+x-tenant-id: tenant-standard
+x-ratelimit-tier: standard
+x-ratelimit-limit: 20
+x-ratelimit-remaining: 13
+
+{"message":"Resource payload successfully retrieved.","status":"success"}
+```
