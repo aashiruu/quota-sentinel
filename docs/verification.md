@@ -71,7 +71,9 @@ tests/test_rate_limiter.py::test_tenant_isolation_and_rate_limiting PASSED      
 1. Missing Authentication Header (401 Unauthorized)
 ```HTTP
 HTTP/1.1 401 Unauthorized
-content-length: 78
+date: Sun, 16 Aug 2026 13:22:12 GMT
+server: uvicorn
+content-length: 90
 content-type: application/json
 
 {"error":"Unauthorized","message":"Missing required 'X-Tenant-ID' or 'X-API-Key' header."}
@@ -79,22 +81,26 @@ content-type: application/json
 2. Throttled Tenant (`tenant-alpha` Request 6 -> 429)
 ```HTTP
 HTTP/1.1 429 Too Many Requests
-retry-after: 60
+date: Sun, 16 Aug 2026 13:22:28 GMT
+server: uvicorn
 x-ratelimit-limit: 5
 x-ratelimit-remaining: 0
-content-length: 118
+retry-after: 59
+content-length: 135
 content-type: application/json
 
-{"error":"Too Many Requests","message":"Tenant 'tenant-alpha' exceeded quota limit of 5 requests per minute.","retry_after_seconds":60}
+{"error":"Too Many Requests","message":"Tenant 'tenant-alpha' exceeded quota limit of 5 requests per minute.","retry_after_seconds":59}
 ```
 3. Isolated Tenant (`tenant-beta` Request -> 200 OK)
 ```HTTP
 HTTP/1.1 200 OK
+date: Sun, 16 Aug 2026 13:22:47 GMT
+server: uvicorn
+content-length: 73
+content-type: application/json
 x-ratelimit-limit: 5
 x-ratelimit-remaining: 4
 x-tenant-id: tenant-beta
-content-length: 73
-content-type: application/json
 
 {"message":"Resource payload successfully retrieved.","status":"success"}
 ```
