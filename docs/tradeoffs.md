@@ -21,7 +21,20 @@ This document records architectural decisions made at each milestone.
 Chose the **Sliding Window Log** backed by a Redis pipeline. In an async API gateway handling multi-tenant isolation, eliminating boundary burst vulnerabilities is critical to prevent aggressive tenants from momentarily degrading shared capacity at window boundaries.
 
 ## 2. Quota Tier Storage & Lookup (Stage 2)
-*Pending implementation.*
+
+### Options Evaluated
+1. **External Database (PostgreSQL / DynamoDB):**
+   - *Mechanism:* Query tenant tier limits from a database table per request or on cache miss.
+   - *Trade-off:* Supports dynamic updates without restarts and persistent auditing, but adds network latency (2-10 ms) on the API hot path if cache synchronization fails.
+2. **In-Memory Configuration Registry:**
+   - *Mechanism:* Static tier mapping dictionary loaded at gateway initialization.
+   - *Trade-off:* Sub-microsecond O(1) in-memory lookups with zero network overhead, but requires service restarts or a reload hook to update tenant tier assignments.
+3. **Redis-Backed Hash Mappings:**
+   - *Mechanism:* Store tenant configurations in Redis keys (`HGETALL tenant:config:<id>`).
+   - *Trade-off:* Shared across multiple gateway worker replicas, but requires additional Redis round-trips if not combined with the sliding window Lua pipeline.
+
+### Decision
+Implemented an **in-memory configuration registry** with standard tiers (`free: 5 req/min`, `standard: 20 req/min`, `premium: 60 req/min`) and fallback defaults. This guarantees zero added latency during tenant resolution while isolating tier limits per tenant ID.
 
 ## 3. Metric Cardinality Strategy (Stage 4)
 *Pending implementation.*
