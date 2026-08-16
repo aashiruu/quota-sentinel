@@ -40,3 +40,61 @@ content-type: application/json
 {"message":"Resource payload successfully retrieved.","status":"success"}
 ```
 
+## Stage 1: Per-Tenant Rate Limiting
+
+### Verification Goal
+Demonstrate that:
+1. Missing tenant identification headers are rejected with `401 Unauthorized`.
+2. A single tenant (`tenant-alpha`) is rate-limited at 5 requests/minute with `429 Too Many Requests` and a `Retry-After` header.
+3. An adjacent tenant (`tenant-beta`) remains unaffected (200 OK) during `tenant-alpha`'s throttling period.
+
+### Automated Test Suite Execution
+```text
+(.venv) famous@famous:~/quota-sentinel$ pytest -v
+================================================= test session starts ==================================================
+platform linux -- Python 3.10.12, pytest-9.1.1, pluggy-1.6.0 -- /home/famous/quota-sentinel/.venv/bin/python3
+cachedir: .pytest_cache
+rootdir: /home/famous/quota-sentinel
+configfile: pytest.ini
+plugins: asyncio-1.4.0, anyio-4.14.2
+asyncio: mode=auto, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 3 items
+
+tests/test_rate_limiter.py::test_health_check_does_not_require_tenant PASSED                                     [ 33%]
+tests/test_rate_limiter.py::test_missing_tenant_header_rejected PASSED                                           [ 66%]
+tests/test_rate_limiter.py::test_tenant_isolation_and_rate_limiting PASSED                                       [100%]
+
+================================================== 3 passed in 1.21s ===================================================
+```
+
+### Manual Curl Verification Outputs
+1. Missing Authentication Header (401 Unauthorized)
+```HTTP
+HTTP/1.1 401 Unauthorized
+content-length: 78
+content-type: application/json
+
+{"error":"Unauthorized","message":"Missing required 'X-Tenant-ID' or 'X-API-Key' header."}
+```
+2. Throttled Tenant (`tenant-alpha` Request 6 -> 429)
+```HTTP
+HTTP/1.1 429 Too Many Requests
+retry-after: 60
+x-ratelimit-limit: 5
+x-ratelimit-remaining: 0
+content-length: 118
+content-type: application/json
+
+{"error":"Too Many Requests","message":"Tenant 'tenant-alpha' exceeded quota limit of 5 requests per minute.","retry_after_seconds":60}
+```
+3. Isolated Tenant (`tenant-beta` Request -> 200 OK)
+```HTTP
+HTTP/1.1 200 OK
+x-ratelimit-limit: 5
+x-ratelimit-remaining: 4
+x-tenant-id: tenant-beta
+content-length: 73
+content-type: application/json
+
+{"message":"Resource payload successfully retrieved.","status":"success"}
+```
