@@ -47,4 +47,4 @@ class SlidingWindowRateLimiter:
         return False, request_count, 0
 
     async def close(self):
-        await self.redis_client.close()
+        await self.redis_client.aclose()
