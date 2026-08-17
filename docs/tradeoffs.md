@@ -37,7 +37,20 @@ Chose the **Sliding Window Log** backed by a Redis pipeline. In an async API gat
 Implemented an **in-memory configuration registry** with standard tiers (`free: 5 req/min`, `standard: 20 req/min`, `premium: 60 req/min`) and fallback defaults. This guarantees zero added latency during tenant resolution while isolating tier limits per tenant ID.
 
 ## 3. Metric Cardinality Strategy (Stage 4)
-*Pending implementation.*
+
+### Options Evaluated
+1. **Unbounded High-Cardinality Labels:**
+   - *Approach:* Tag metrics with `tenant_id`, `path`, `method`, `user_ip`, `status_code`.
+   - *Trade-off:* High debuggability, but severe cardinality explosion risk. If a platform has 10,000 tenants across 50 endpoints and 5 status codes, a single metric creates $10,000 \times 50 \times 5 = 2,500,000$ active time series in Prometheus TSDB, crashing memory.
+2. **Global Aggregated Metrics:**
+   - *Approach:* Scrape total request counts and status codes without tenant tags.
+   - *Trade-off:* Near-zero storage footprint, but completely obscures tenant-level fairness and prevents identifying which tenant is exhausting capacity.
+3. **Bounded Cardinality with Controlled Labels:**
+   - *Approach:* Tag metrics strictly with `tenant_id`, `tier`, and standard `status_code`. Normalize unauthenticated requests to `anonymous` and omit ephemeral attributes like IPs and request parameters.
+   - *Trade-off:* Bounded metric footprint ($O(\text{tenants} \times \text{tiers})$) with full visibility into per-tenant throughput and throttle rates.
+
+### Decision
+Adopted **Bounded Cardinality with Controlled Labels** (`tenant_id`, `tier`, `status_code`). High-cardinality metadata (such as individual client IP addresses and trace tokens) is relegated to structured logging and distributed tracing rather than Prometheus counters.
 
 ## 4. Rate-Limit Rejection Behavior (Stage 5)
 *Pending implementation.*
