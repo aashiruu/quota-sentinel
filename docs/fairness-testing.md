@@ -87,3 +87,38 @@ Tenant: tenant-free | 200 OK: 3 | 429 Throttled: 0
 - **Zero Impact on Neighbors**: `tenant-standard` (8 requests) and `tenant-free` (3 requests) achieved 100% availability with 0 throttled requests.
 - **Fair Allocation**: Each tenant operated entirely within their isolated quota boundary, proving that shared platform infrastructure can remain resilient against bad actors under heavy saturation.
 ## Visual Evidence
+### Prometheus Raw Metrics Scrape Output (Post Noisy-Neighbor Test)
+```text
+# HELP quota_sentinel_requests_total Total HTTP requests handled by the gateway
+# TYPE quota_sentinel_requests_total counter
+quota_sentinel_requests_total{status_code="200",tenant_id="tenant-noisy",tier="free"} 5.0
+quota_sentinel_requests_total{status_code="200",tenant_id="tenant-standard",tier="standard"} 8.0
+quota_sentinel_requests_total{status_code="200",tenant_id="tenant-free",tier="free"} 3.0
+quota_sentinel_requests_total{status_code="429",tenant_id="tenant-noisy",tier="free"} 1915.0
+
+# HELP quota_sentinel_throttled_total Total requests rejected by rate limiting per tenant
+# TYPE quota_sentinel_throttled_total counter
+quota_sentinel_throttled_total{tenant_id="tenant-noisy",tier="free"} 1915.0
+
+# HELP quota_sentinel_quota_limit Configured rate limit ceiling per tenant (req/min)
+# TYPE quota_sentinel_quota_limit gauge
+quota_sentinel_quota_limit{tenant_id="tenant-free",tier="free"} 5.0
+quota_sentinel_quota_limit{tenant_id="tenant-standard",tier="standard"} 20.0
+quota_sentinel_quota_limit{tenant_id="tenant-noisy",tier="free"} 5.0# HELP quota_sentinel_requests_total Total HTTP requests handled by the gateway
+# TYPE quota_sentinel_requests_total counter
+quota_sentinel_requests_total{status_code="200",tenant_id="tenant-noisy",tier="free"} 5.0
+quota_sentinel_requests_total{status_code="200",tenant_id="tenant-standard",tier="standard"} 8.0
+quota_sentinel_requests_total{status_code="200",tenant_id="tenant-free",tier="free"} 3.0
+quota_sentinel_requests_total{status_code="429",tenant_id="tenant-noisy",tier="free"} 1915.0
+
+# HELP quota_sentinel_throttled_total Total requests rejected by rate limiting per tenant
+# TYPE quota_sentinel_throttled_total counter
+quota_sentinel_throttled_total{tenant_id="tenant-noisy",tier="free"} 1915.0
+
+# HELP quota_sentinel_quota_limit Configured rate limit ceiling per tenant (req/min)
+# TYPE quota_sentinel_quota_limit gauge
+quota_sentinel_quota_limit{tenant_id="tenant-free",tier="free"} 5.0
+quota_sentinel_quota_limit{tenant_id="tenant-standard",tier="standard"} 20.0
+quota_sentinel_quota_limit{tenant_id="tenant-noisy",tier="free"} 5.0
+```
+

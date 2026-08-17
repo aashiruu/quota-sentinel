@@ -5,3 +5,14 @@ services:
     ports:
       - "6379:6379"
     restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v2.50.0
+    container_name: quota-sentinel-prometheus
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    restart: unless-stopped

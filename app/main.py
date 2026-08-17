@@ -3,7 +3,13 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, Response, status
 from fastapi.responses import JSONResponse
 from app.limiter import SlidingWindowRateLimiter
-from app.config import get_tenant_tier
+from app.config import get_tenant_tier, TENANT_TIER_MAP, TIER_DEFINITIONS
+from app.metrics import (
+    REQUESTS_TOTAL,
+    THROTTLED_TOTAL,
+    QUOTA_LIMIT_GAUGE,
+    metrics_endpoint,
+)
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
@@ -19,6 +25,13 @@ def get_limiter() -> SlidingWindowRateLimiter:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Initialize static quota gauge metrics
+    for tenant_id, tier_name in TENANT_TIER_MAP.items():
+        tier_cfg = TIER_DEFINITIONS[tier_name]
+        QUOTA_LIMIT_GAUGE.labels(tenant_id=tenant_id, tier=tier_name).set(
+            tier_cfg.rate_limit
+        )
+
     get_limiter()
     yield
     global limiter
@@ -30,19 +43,28 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Quota Sentinel",
     description="Learning project exploring multi-tenant rate limiting and fair resource allocation.",
-    version="0.2.0",
+    version="0.3.0",
     lifespan=lifespan,
 )
 
 
+@app.get("/metrics")
+def get_metrics():
+    return metrics_endpoint()
+
+
 @app.middleware("http")
 async def rate_limit_middleware(request: Request, call_next):
-    if request.url.path in ["/health", "/docs", "/openapi.json"]:
+    # Bypass health checks, metrics scraper, and openapi routes
+    if request.url.path in ["/health", "/metrics", "/docs", "/openapi.json"]:
         return await call_next(request)
 
     # 1. Identify Tenant
     tenant_id = request.headers.get("X-Tenant-ID") or request.headers.get("X-API-Key")
     if not tenant_id:
+        REQUESTS_TOTAL.labels(
+            tenant_id="anonymous", tier="none", status_code="401"
+        ).inc()
         return JSONResponse(
             status_code=status.HTTP_401_UNAUTHORIZED,
             content={
@@ -51,8 +73,9 @@ async def rate_limit_middleware(request: Request, call_next):
             },
         )
 
-    # 2. Resolve Tenant Quota Tier
+    # 2. Resolve Tenant Tier Quota
     tier = get_tenant_tier(tenant_id)
+    QUOTA_LIMIT_GAUGE.labels(tenant_id=tenant_id, tier=tier.name).set(tier.rate_limit)
 
     # 3. Check Sliding Window Limit against Tier Limit
     active_limiter = get_limiter()
@@ -63,6 +86,11 @@ async def rate_limit_middleware(request: Request, call_next):
     )
 
     if is_limited:
+        REQUESTS_TOTAL.labels(
+            tenant_id=tenant_id, tier=tier.name, status_code="429"
+        ).inc()
+        THROTTLED_TOTAL.labels(tenant_id=tenant_id, tier=tier.name).inc()
+
         return JSONResponse(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             headers={
@@ -81,10 +109,16 @@ async def rate_limit_middleware(request: Request, call_next):
         )
 
     response: Response = await call_next(request)
+    REQUESTS_TOTAL.labels(
+        tenant_id=tenant_id, tier=tier.name, status_code=str(response.status_code)
+    ).inc()
+
     response.headers["X-Tenant-ID"] = tenant_id
     response.headers["X-RateLimit-Tier"] = tier.name
     response.headers["X-RateLimit-Limit"] = str(tier.rate_limit)
-    response.headers["X-RateLimit-Remaining"] = str(max(0, tier.rate_limit - current_usage))
+    response.headers["X-RateLimit-Remaining"] = str(
+        max(0, tier.rate_limit - current_usage)
+    )
     return response
 
 
