@@ -28,21 +28,26 @@ async def test_missing_tenant_header_rejected():
 
 
 @pytest.mark.asyncio
-async def test_tiered_rate_limits_enforcement():
+async def test_tiered_rate_limits_and_structured_rejection():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        # Free Tier (limit 5): Send 5 requests (200), 6th request triggers 429
+        # Free Tier (limit 5): Send 5 requests (200 OK)
         for i in range(5):
             res = await client.get("/api/v1/data", headers={"X-Tenant-ID": "tenant-free"})
             assert res.status_code == 200
             assert res.headers["X-RateLimit-Tier"] == "free"
             assert res.headers["X-RateLimit-Limit"] == "5"
 
+        # 6th request triggers structured 429 payload
         res_free_blocked = await client.get("/api/v1/data", headers={"X-Tenant-ID": "tenant-free"})
         assert res_free_blocked.status_code == 429
         assert res_free_blocked.headers["X-RateLimit-Tier"] == "free"
-        assert res_free_blocked.json()["tier"] == "free"
 
-        # Standard Tier (limit 20): Send 10 requests, none are throttled
+        body = res_free_blocked.json()
+        assert body["error"]["code"] == "rate_limit_exceeded"
+        assert body["error"]["details"]["tier"] == "free"
+        assert body["error"]["details"]["limit"] == 5
+
+        # Standard Tier (limit 20): Send 10 requests, none throttled
         for _ in range(10):
             res_std = await client.get("/api/v1/data", headers={"X-Tenant-ID": "tenant-standard"})
             assert res_std.status_code == 200
