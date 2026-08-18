@@ -189,3 +189,31 @@ x-ratelimit-remaining: 13
 
 {"message":"Resource payload successfully retrieved.","status":"success"}
 ```
+## Stage 5: Graceful 429 Responses
+
+### Verification Goal
+Demonstrate the structured JSON error payload returned during a throttling event, designed for safe parsing by client applications.
+
+### Manual Curl Verification
+```http
+HTTP/1.1 429 Too Many Requests
+x-ratelimit-tier: free
+x-ratelimit-limit: 5
+x-ratelimit-remaining: 0
+retry-after: 59
+content-length: 228
+content-type: application/json
+
+{
+  "error": {
+    "code": "rate_limit_exceeded",
+    "message": "Tenant 'tenant-alpha' on tier 'free' exceeded quota of 5 req/min.",
+    "details": {
+      "tier": "free",
+      "limit": 5,
+      "retry_after_seconds": 59,
+      "resolution": "Implement exponential backoff or upgrade your tier."
+    }
+  }
+}
+```
