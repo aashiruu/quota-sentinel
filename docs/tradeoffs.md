@@ -53,4 +53,17 @@ Implemented an **in-memory configuration registry** with standard tiers (`free: 
 Adopted **Bounded Cardinality with Controlled Labels** (`tenant_id`, `tier`, `status_code`). High-cardinality metadata (such as individual client IP addresses and trace tokens) is relegated to structured logging and distributed tracing rather than Prometheus counters.
 
 ## 4. Rate-Limit Rejection Behavior (Stage 5)
-*Pending implementation.*
+
+### Options Evaluated
+1. **Hard Reject (HTTP 429):**
+   - *Mechanism:* Immediate 429 response with a `Retry-After` header.
+   - *Trade-off:* Requires client-side retry logic, but instantly frees up gateway connection pools and threads.
+2. **Connection Queuing (Traffic Shaping):**
+   - *Mechanism:* Hold the HTTP connection open and `sleep` until the next rate-limit window opens.
+   - *Trade-off:* "Magic" for the client (no retry logic needed), but a catastrophic anti-pattern for a shared API gateway. A noisy neighbor would consume all available uvicorn worker connections by keeping them stuck in a sleep state, causing a platform-wide DoS for compliant tenants.
+3. **Graceful Degradation (Fallback Cached Response):**
+   - *Mechanism:* Serve a stale cached response instead of failing.
+   - *Trade-off:* High availability, but highly domain-specific and adds immense caching complexity.
+
+### Decision
+Implemented a **Strict Hard Reject (429) with explicit `Retry-After` headers and a structured error payload**. In a multi-tenant gateway, queuing requests is fatal because it shifts the cost of a noisy neighbor's aggression onto the platform's shared socket capacity. Dropping the connection instantly protects the gateway.

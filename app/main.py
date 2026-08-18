@@ -100,11 +100,16 @@ async def rate_limit_middleware(request: Request, call_next):
                 "Retry-After": str(retry_after),
             },
             content={
-                "error": "Too Many Requests",
-                "message": f"Tenant '{tenant_id}' on tier '{tier.name}' exceeded quota limit of {tier.rate_limit} requests per minute.",
-                "tier": tier.name,
-                "limit": tier.rate_limit,
-                "retry_after_seconds": retry_after,
+                "error": {
+                    "code": "rate_limit_exceeded",
+                    "message": f"Tenant '{tenant_id}' on tier '{tier.name}' exceeded quota of {tier.rate_limit} req/min.",
+                    "details": {
+                        "tier": tier.name,
+                        "limit": tier.rate_limit,
+                        "retry_after_seconds": retry_after,
+                        "resolution": "Implement exponential backoff or upgrade your tier."
+                    }
+                }
             },
         )
 
