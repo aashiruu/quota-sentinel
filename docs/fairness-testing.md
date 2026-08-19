@@ -124,19 +124,34 @@ quota_sentinel_quota_limit{tenant_id="tenant-noisy",tier="free"} 5.0
 
 ## Visual Evidence
 
-### Grafana Live Telemetry & Fairness Verification
+### 1. Complete Fairness Dashboard Overview
 <img width="1019" height="487" alt="image" src="https://github.com/user-attachments/assets/b3b8c945-2d36-4a69-b99e-577d3ff62e8c" />
 
-### Observed Telemetry Breakdown
-1. **Throughput by Tenant (200 OK vs 429):**
-   - `tenant-noisy (HTTP 429)` spikes to **75+ req/s**, absorbing all rate-limit drops immediately after its 5-request burst.
-   - `tenant-standard (HTTP 200)` and `tenant-free (HTTP 200)` maintain continuous, uninterrupted 200 OK traffic along the baseline with zero drops.
-2. **Rejection Isolation:**
-   - Only `tenant-noisy` registers in the `quota_sentinel_throttled_total` time series. Compliant tenants register zero throttled events.
-3. **Configured Quota Ceilings:**
-   - Free tier: 5 req/min (`tenant-noisy`, `tenant-free`, `tenant-alpha`).
-   - Standard tier: 20 req/min (`tenant-standard`, `tenant-beta`).
-   - Premium tier: 60 req/min (`tenant-premium`).
+*High-level view of simultaneous traffic execution across all three panels.*
+
+---
+
+### 2. Panel Deep Dives
+
+#### A. Throughput by Tenant (200 OK vs 429)
+![Throughput Panel](assets/grafana-throughput-panel.png)
+
+- **`tenant-noisy (HTTP 429)`** spikes to **75+ req/s**, absorbing all rate-limit drops immediately after its 5-request burst.
+- **`tenant-standard (HTTP 200)`** and **`tenant-free (HTTP 200)`** maintain continuous, uninterrupted 200 OK traffic along the baseline with zero drops.
+
+#### B. Rejection Rate & Throttled Isolation
+![Rejections Panel](assets/grafana-rejections-panel.png)
+
+- Only `tenant-noisy` registers in the `quota_sentinel_throttled_total` time series. Compliant tenants register zero throttled events.
+
+#### C. Configured Quota Ceilings
+![Quota Ceilings Panel](assets/grafana-ceilings-panel.png)
+
+- Free tier: 5 req/min (`tenant-noisy`, `tenant-free`, `tenant-alpha`).
+- Standard tier: 20 req/min (`tenant-standard`, `tenant-beta`).
+- Premium tier: 60 req/min (`tenant-premium`).
+
+---
 
 ### Prometheus Raw Metrics Scrape Output (Post Load Test)
 ```text
