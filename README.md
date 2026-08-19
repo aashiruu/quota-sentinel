@@ -31,7 +31,7 @@ flowchart LR
     Metrics -.->|Scrapes| Gateway
 ```
 ## Live Dashboard Evidence
-<img width="1019" height="487" alt="image" src="https://github.com/user-attachments/assets/fca11ab1-7e3c-424d-8c11-e11d267f3be0" />
+<img width="1019" height="487" alt="Grafana dashboard showing tenant-noisy throttled while other tenants unaffected" src="https://github.com/user-attachments/assets/fca11ab1-7e3c-424d-8c11-e11d267f3be0" />
 
 *Real-time Grafana telemetry during the noisy-neighbor test: `tenant-noisy` is throttled at 75+ req/s while `tenant-standard` and `tenant-free` experience 0% degradation.*
 ## Documentation
