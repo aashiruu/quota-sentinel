@@ -134,18 +134,18 @@ quota_sentinel_quota_limit{tenant_id="tenant-noisy",tier="free"} 5.0
 ### 2. Panel Deep Dives
 
 #### A. Throughput by Tenant (200 OK vs 429)
-![Throughput Panel](assets/grafana-throughput-panel.png)
+<img width="513" height="279" alt="image" src="https://github.com/user-attachments/assets/abcff5f9-ef58-4059-8d10-3f11cf430a3c" />
 
 - **`tenant-noisy (HTTP 429)`** spikes to **75+ req/s**, absorbing all rate-limit drops immediately after its 5-request burst.
 - **`tenant-standard (HTTP 200)`** and **`tenant-free (HTTP 200)`** maintain continuous, uninterrupted 200 OK traffic along the baseline with zero drops.
 
 #### B. Rejection Rate & Throttled Isolation
-![Rejections Panel](assets/grafana-rejections-panel.png)
+<img width="513" height="280" alt="image" src="https://github.com/user-attachments/assets/0a3528bb-ecc7-4b0f-ba6e-cd828826eba7" />
 
 - Only `tenant-noisy` registers in the `quota_sentinel_throttled_total` time series. Compliant tenants register zero throttled events.
 
 #### C. Configured Quota Ceilings
-![Quota Ceilings Panel](assets/grafana-ceilings-panel.png)
+<img width="1019" height="212" alt="image" src="https://github.com/user-attachments/assets/f17480d8-fad7-4816-82d9-32eadf4f072d" />
 
 - Free tier: 5 req/min (`tenant-noisy`, `tenant-free`, `tenant-alpha`).
 - Standard tier: 20 req/min (`tenant-standard`, `tenant-beta`).
