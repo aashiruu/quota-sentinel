@@ -30,6 +30,9 @@ flowchart LR
 
     Metrics -.->|Scrapes| Gateway
 ```
+## Live Dashboard Evidence
+![Grafana Noisy Neighbor Dashboard](docs/assets/grafana-fairness-dashboard.png)
+*Real-time Grafana telemetry during the noisy-neighbor test: `tenant-noisy` is throttled at 75+ req/s while `tenant-standard` and `tenant-free` experience 0% degradation.*
 ## Documentation
 The complete evolution of the project, including design decisions and actual test evidence, is documented across three files:
 

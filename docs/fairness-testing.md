@@ -122,3 +122,41 @@ quota_sentinel_quota_limit{tenant_id="tenant-standard",tier="standard"} 20.0
 quota_sentinel_quota_limit{tenant_id="tenant-noisy",tier="free"} 5.0
 ```
 
+## Visual Evidence
+
+### Grafana Live Telemetry & Fairness Verification
+![Grafana Multi-Tenant Fairness Dashboard](assets/grafana-fairness-dashboard.png)
+
+### Observed Telemetry Breakdown
+1. **Throughput by Tenant (200 OK vs 429):**
+   - `tenant-noisy (HTTP 429)` spikes to **75+ req/s**, absorbing all rate-limit drops immediately after its 5-request burst.
+   - `tenant-standard (HTTP 200)` and `tenant-free (HTTP 200)` maintain continuous, uninterrupted 200 OK traffic along the baseline with zero drops.
+2. **Rejection Isolation:**
+   - Only `tenant-noisy` registers in the `quota_sentinel_throttled_total` time series. Compliant tenants register zero throttled events.
+3. **Configured Quota Ceilings:**
+   - Free tier: 5 req/min (`tenant-noisy`, `tenant-free`, `tenant-alpha`).
+   - Standard tier: 20 req/min (`tenant-standard`, `tenant-beta`).
+   - Premium tier: 60 req/min (`tenant-premium`).
+
+### Prometheus Raw Metrics Scrape Output (Post Load Test)
+```text
+# HELP quota_sentinel_requests_total Total HTTP requests handled by the gateway
+# TYPE quota_sentinel_requests_total counter
+quota_sentinel_requests_total{status_code="200",tenant_id="tenant-noisy",tier="free"} 5.0
+quota_sentinel_requests_total{status_code="200",tenant_id="tenant-standard",tier="standard"} 8.0
+quota_sentinel_requests_total{status_code="200",tenant_id="tenant-free",tier="free"} 3.0
+quota_sentinel_requests_total{status_code="429",tenant_id="tenant-noisy",tier="free"} 1915.0
+
+# HELP quota_sentinel_throttled_total Total requests rejected by rate limiting per tenant
+# TYPE quota_sentinel_throttled_total counter
+quota_sentinel_throttled_total{tenant_id="tenant-noisy",tier="free"} 1915.0
+
+# HELP quota_sentinel_quota_limit Configured rate limit ceiling per tenant (req/min)
+# TYPE quota_sentinel_quota_limit gauge
+quota_sentinel_quota_limit{tenant_id="tenant-free",tier="free"} 5.0
+quota_sentinel_quota_limit{tenant_id="tenant-alpha",tier="free"} 5.0
+quota_sentinel_quota_limit{tenant_id="tenant-standard",tier="standard"} 20.0
+quota_sentinel_quota_limit{tenant_id="tenant-beta",tier="standard"} 20.0
+quota_sentinel_quota_limit{tenant_id="tenant-premium",tier="premium"} 60.0
+quota_sentinel_quota_limit{tenant_id="tenant-noisy",tier="free"} 5.0
+```
