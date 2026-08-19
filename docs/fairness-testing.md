@@ -125,7 +125,7 @@ quota_sentinel_quota_limit{tenant_id="tenant-noisy",tier="free"} 5.0
 ## Visual Evidence
 
 ### Grafana Live Telemetry & Fairness Verification
-![Grafana Multi-Tenant Fairness Dashboard](assets/grafana-fairness-dashboard.png)
+<img width="1019" height="487" alt="image" src="https://github.com/user-attachments/assets/b3b8c945-2d36-4a69-b99e-577d3ff62e8c" />
 
 ### Observed Telemetry Breakdown
 1. **Throughput by Tenant (200 OK vs 429):**
