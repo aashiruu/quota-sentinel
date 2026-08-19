@@ -33,11 +33,9 @@ flowchart LR
 ## Documentation
 The complete evolution of the project, including design decisions and actual test evidence, is documented across three files:
 
-1. Design Decisions & Trade-offs: Architectural evaluations covering Sliding Window Logs vs. Token Buckets, in-memory tier lookup vs. external databases, bounded metric cardinality, and rejection mechanics.
-
-2. Noisy-Neighbor Fairness Test: The core load-testing scenario, definition of fairness in measurable terms, and execution data proving tenant isolation under saturation.
-
-3. Endpoint & Behavior Verification: Raw curl outputs and test suite logs verifying baseline gateway behavior across all development milestones.
+1. [Design Decisions & Trade-offs](docs/tradeoffs.md): Architectural evaluations covering Sliding Window Logs vs. Token Buckets, in-memory tier lookup vs. external databases, bounded metric cardinality, and rejection mechanics.
+2. [Noisy-Neighbor Fairness Test](docs/fairness-testing.md): The core load-testing scenario, definition of fairness in measurable terms, and execution data proving tenant isolation under saturation.
+3. [Endpoint & Behavior Verification](docs/verification.md): Raw curl outputs and test suite logs verifying baseline gateway behavior across all development milestones.
 
 ## Quickstart
 1. Start Infrastructure
