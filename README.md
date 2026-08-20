@@ -5,7 +5,7 @@
 ## Overview
 Quota Sentinel is a lightweight multi-tenant API gateway demonstration. It explores the central challenge of shared infrastructure: **how do you guarantee fairness when multiple tenants share one system, preventing one bad actor from degrading service for everyone else?**
 
-Using a FastAPI gateway backed by atomic Redis Lua scripts, this project demonstrates that a "noisy neighbor" aggressively flooding the gateway is strictly isolated and throttled, allowing compliant tenants to maintain 100% availability.
+During the noisy-neighbor test, tenant-noisy was intentionally flooded with traffic and throttled at its 5 req/min ceiling, as expected. tenant-free, sharing the same free-tier quota, was independently throttled at its own 5 req/min limit based on its own traffic, not affected by tenant-noisy's flood, since quotas are tracked per-tenant with no shared pool. tenant-standard, on a separate 20 req/min tier, saw zero throttling throughout the test, demonstrating that a tenant on a different tier is fully isolated from another tenant's excess traffic regardless of tier proximity.
 
 ## Architecture
 ```mermaid
