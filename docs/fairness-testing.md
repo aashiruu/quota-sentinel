@@ -124,32 +124,29 @@ quota_sentinel_quota_limit{tenant_id="tenant-noisy",tier="free"} 5.0
 
 ## Visual Evidence
 
-### 1. Complete Fairness Dashboard Overview
-<img width="1019" height="487" alt="image" src="https://github.com/user-attachments/assets/b3b8c945-2d36-4a69-b99e-577d3ff62e8c" />
+### 1. Multi-Tenant Fairness Dashboard Overview
+![Grafana dashboard showing tenant-noisy throttled at 80+ req/s while tenant-standard and tenant-free maintain 100% 200 OK availability](assets/grafana-fairness-dashboard.png)
 
-*High-level view of simultaneous traffic execution across all three panels.*
+*Real-time Grafana telemetry during the noisy-neighbor test: `tenant-noisy` is throttled at 80+ req/s (bottom-left and top-left) while concurrent compliant tenants maintain uninterrupted 200 OK availability (top-right).*
 
 ---
 
-### 2. Panel Deep Dives
+### 2. Deep-Dive Telemetry Breakdown
 
-#### A. Throughput by Tenant (200 OK vs 429)
-<img width="513" height="279" alt="image" src="https://github.com/user-attachments/assets/abcff5f9-ef58-4059-8d10-3f11cf430a3c" />
+#### A. Compliant Tenant Isolation & Success Stream (Zoomed)
+![Compliant Tenants 200 OK Stream](assets/grafana-compliant-stream.png)
 
-- **`tenant-noisy (HTTP 429)`** spikes to **75+ req/s**, absorbing all rate-limit drops immediately after its 5-request burst.
-- **`tenant-standard (HTTP 200)`** and **`tenant-free (HTTP 200)`** maintain continuous, uninterrupted 200 OK traffic along the baseline with zero drops.
+- **`tenant-standard (200 OK)`**: Maintained a steady rate of ~0.25 req/s (15 req/min) with zero dropped requests.
+- **`tenant-free (200 OK)`**: Maintained its scheduled ~0.1 req/s rate with zero dropped requests.
+- **`tenant-free (429 Drops)`**: Remained flat at exactly 0 req/s along the baseline throughout the entire saturation window.
 
-#### B. Rejection Rate & Throttled Isolation
-<img width="513" height="280" alt="image" src="https://github.com/user-attachments/assets/0a3528bb-ecc7-4b0f-ba6e-cd828826eba7" />
+#### B. Rejections: 429 Throttled Rate
+![Rejections 429 Throttled Rate](assets/grafana-rejections-panel.png)
 
-- Only `tenant-noisy` registers in the `quota_sentinel_throttled_total` time series. Compliant tenants register zero throttled events.
+- Only `tenant-noisy` appears in the throttled time series, absorbing between 60 to 80+ req/s of rate-limit drops immediately after its initial 5-request burst.
+- Compliant tenants recorded zero throttle events.
 
-#### C. Configured Quota Ceilings
-<img width="1019" height="212" alt="image" src="https://github.com/user-attachments/assets/f17480d8-fad7-4816-82d9-32eadf4f072d" />
-
-- Free tier: 5 req/min (`tenant-noisy`, `tenant-free`, `tenant-alpha`).
-- Standard tier: 20 req/min (`tenant-standard`, `tenant-beta`).
-- Premium tier: 60 req/min (`tenant-premium`).
+> **Scope Note:** While the gateway maintains static configuration ceilings for 6 reference tenants (`tenant-alpha`, `tenant-beta`, `tenant-free`, `tenant-noisy`, `tenant-premium`, `tenant-standard`), the fairness load test specifically exercises a 3-tenant concurrent matrix (`tenant-noisy`, `tenant-standard`, `tenant-free`) to isolate tier behaviors under saturation.
 
 ---
 
