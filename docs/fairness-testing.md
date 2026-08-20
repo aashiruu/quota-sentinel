@@ -125,7 +125,7 @@ quota_sentinel_quota_limit{tenant_id="tenant-noisy",tier="free"} 5.0
 ## Visual Evidence
 
 ### 1. Multi-Tenant Fairness Dashboard Overview
-![Grafana dashboard showing tenant-noisy throttled at 80+ req/s while tenant-standard and tenant-free maintain 100% 200 OK availability](assets/grafana-fairness-dashboard.png)
+<img width="1022" height="521" alt="Grafana dashboard showing tenant-noisy throttled at 80+ req/s while tenant-standard and tenant-free maintain 100% 200 OK availability" src="https://github.com/user-attachments/assets/08b105de-ee96-4d93-92f7-b3bab84d9d4d" />
 
 *Real-time Grafana telemetry during the noisy-neighbor test: `tenant-noisy` is throttled at 80+ req/s (bottom-left and top-left) while concurrent compliant tenants maintain uninterrupted 200 OK availability (top-right).*
 
@@ -134,14 +134,16 @@ quota_sentinel_quota_limit{tenant_id="tenant-noisy",tier="free"} 5.0
 ### 2. Deep-Dive Telemetry Breakdown
 
 #### A. Compliant Tenant Isolation & Success Stream (Zoomed)
-![Compliant Tenants 200 OK Stream](assets/grafana-compliant-stream.png)
+<img width="515" height="275" alt="Compliant Tenants 200 OK Stream" src="https://github.com/user-attachments/assets/482e6cd4-bfd7-4691-85eb-4041d0d1b2e8" />
+
 
 - **`tenant-standard (200 OK)`**: Maintained a steady rate of ~0.25 req/s (15 req/min) with zero dropped requests.
 - **`tenant-free (200 OK)`**: Maintained its scheduled ~0.1 req/s rate with zero dropped requests.
 - **`tenant-free (429 Drops)`**: Remained flat at exactly 0 req/s along the baseline throughout the entire saturation window.
 
 #### B. Rejections: 429 Throttled Rate
-![Rejections 429 Throttled Rate](assets/grafana-rejections-panel.png)
+<img width="510" height="240" alt="Rejections 429 Throttled Rate" src="https://github.com/user-attachments/assets/4b20993c-9ba3-4349-9e45-1815f6f5dacd" />
+
 
 - Only `tenant-noisy` appears in the throttled time series, absorbing between 60 to 80+ req/s of rate-limit drops immediately after its initial 5-request burst.
 - Compliant tenants recorded zero throttle events.
